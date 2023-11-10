@@ -19,14 +19,8 @@ class Shaker:
         scene = get_source_from_current_scene(self.source_name)
 
         if not scene:
-            # restore_sceneitem_after_shake()
             return
 
-        id = obs.obs_sceneitem_get_id(scene)
-        # if shaken_sceneitem and obs.obs_sceneitem_get_id(shaken_sceneitem) != id:
-        #   restore_sceneitem_after_shake()
-        # if not shaken_sceneitem:
-        #   save_sceneitem_for_shake(scene)
         frame = int(
             ((time.time() - self.start_time) / self.animation.duration)
             * self.animation.resolution
