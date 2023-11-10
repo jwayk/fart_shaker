@@ -9,14 +9,15 @@ from obs import get_source_from_current_scene
 class Shaker:
     start_time = None
 
-    def __init__(self, animation: FartShake):
+    def __init__(self, source_name: str, animation: FartShake):
+        self.set_source(source_name)
         self.set_animation(animation)
 
-    def shake(self, source_name, trigger=False):
+    def shake(self, trigger=False):
         if not self.start_time or trigger:
             self.start_time = time.time()
 
-        scene = get_source_from_current_scene(source_name)
+        scene = get_source_from_current_scene(self.source_name)
 
         if not scene:
             # restore_sceneitem_after_shake()
@@ -38,10 +39,14 @@ class Shaker:
         angle = self.animation.function[frame]
         obs.obs_sceneitem_set_rot(scene, angle)
 
+    def set_source(self, source_name: str):
+        self.source_name = source_name
+
     def set_animation(self, animation: FartShake):
         self.animation = animation
 
 
+DEFAULT_SOURCE = ""
 DEFAULT_AMPLITUDE = 40
 DEFAULT_FREQUENCY = 50
 DEFAULT_DURATION = 1.4
@@ -49,21 +54,22 @@ DEFAULT_DAMPING_FACTOR = 10
 
 
 shaker = Shaker(
+    source_name=DEFAULT_SOURCE,
     animation=FartShake(
         amplitude=DEFAULT_AMPLITUDE,
         frequency=DEFAULT_FREQUENCY,
         duration=DEFAULT_DURATION,
         damping_factor=DEFAULT_DAMPING_FACTOR,
-    )
+    ),
 )
 
 
 # Description displayed in the Scripts dialog window
 def script_description():
-    return """Source Shake!!
-            Shake a source in the current scene when a hotkey is pressed. Go to Settings
-             then Hotkeys to select the key combination.Check the 
-            Source Shake Scripting Tutorial on the OBS Wiki for more information."""
+    return """FART ON YOUR VIEWERS!
+    
+Finally, a script to facilitate hours of fantastic fecal funny foibles!
+Configure a hotkey in Settings > Hotkeys and get to farting!"""
 
 
 # Global variables to restore the scene item after shake
@@ -109,10 +115,6 @@ def restore_sceneitem_after_shake():
 source_name = "Spaceship"  # Name of the source to shake
 frequency = 2  # Frequency of oscillations in Hertz
 amplitude = 10  # Angular amplitude of oscillations in degrees
-
-
-def update_angle():
-    pass
 
 
 # Animates the scene item corresponding to source_name in the current scene
@@ -191,11 +193,19 @@ def script_properties():
 
 # Called after change of settings including once after script load
 def script_update(settings):
-    global source_name, frequency, amplitude
     restore_sceneitem_after_shake()
     source_name = obs.obs_data_get_string(settings, "source_name")
-    frequency = obs.obs_data_get_double(settings, "frequency")
-    amplitude = obs.obs_data_get_int(settings, "amplitude")
+    frequency = obs.obs_data_get_double(settings, "DEFAULT_FREQUENCY")
+    amplitude = obs.obs_data_get_int(settings, "DEFAULT_AMPLITUDE")
+    shaker.set_source(source_name)
+    shaker.set_animation(
+        FartShake(
+            amplitude=amplitude,
+            frequency=frequency,
+            duration=DEFAULT_DURATION,
+            damping_factor=DEFAULT_DAMPING_FACTOR,
+        )
+    )
 
 
 # Global animation activity flag
@@ -206,10 +216,10 @@ trigger = False
 def script_tick(seconds):
     global trigger, source_name
     if trigger:
-        shaker.shake(source_name, trigger=True)
+        shaker.shake(trigger=True)
         trigger = False
     elif shaker.start_time:
-        shaker.shake(source_name)
+        shaker.shake()
 
 
 # Callback for the hotkey
