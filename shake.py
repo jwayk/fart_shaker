@@ -2,19 +2,28 @@ import obspython as obs
 import math, time
 
 from animations import FartShake
-from obs import get_source_from_current_scene
+from obs_tools import get_source_from_current_scene, HotkeyManager
+from settings import (
+    DEFAULT_SOURCE,
+    DEFAULT_AMPLITUDE,
+    DEFAULT_FREQUENCY,
+    DEFAULT_DURATION,
+    DEFAULT_DAMPING_FACTOR,
+)
 
 
 class Shaker:
     start_time = None
+    trigger = False
 
     def __init__(self, source_name: str, animation: FartShake):
         self.set_source(source_name)
         self.set_animation(animation)
 
-    def shake(self, trigger=False):
-        if not self.start_time or trigger:
+    def shake(self):
+        if not self.start_time or self.trigger:
             self.start_time = time.time()
+            self.trigger = False
 
         source = get_source_from_current_scene(self.source_name)
 
@@ -39,13 +48,7 @@ class Shaker:
         self.animation = animation
 
 
-DEFAULT_SOURCE = ""
-DEFAULT_AMPLITUDE = 40
-DEFAULT_FREQUENCY = 50
-DEFAULT_DURATION = 1
-DEFAULT_DAMPING_FACTOR = 10
-
-
+hotkey = HotkeyManager()
 shaker = Shaker(
     source_name=DEFAULT_SOURCE,
     animation=FartShake(
@@ -65,71 +68,9 @@ Finally, a script to facilitate hours of fantastic fecal funny foibles!
 Configure a hotkey in Settings > Hotkeys and get to farting!"""
 
 
-# Global variables to restore the scene item after shake
-shaken_sceneitem = None  # Reference to the modified scene item
-shaken_sceneitem_angle = 0  # Initial rotation angle, used as well for oscillations
-shaken_scene_handler = None  # Signal handler of the scene kept to restore
-
-
-# Callback for item_remove signal
-def on_shaken_sceneitem_removed(calldata):
-    restore_sceneitem_after_shake()
-
-
-# Saves the original rotation angle of the given sceneitem and connects item_remove signal
-def save_sceneitem_for_shake(sceneitem):
-    global shaken_sceneitem, shaken_sceneitem_angle
-    shaken_sceneitem = sceneitem
-    shaken_sceneitem_angle = obs.obs_sceneitem_get_rot(sceneitem)
-
-    # Handles scene item deletion
-    global shaken_scene_handler
-    scene_as_source = obs.obs_scene_get_source(obs.obs_sceneitem_get_scene(sceneitem))
-    shaken_scene_handler = obs.obs_source_get_signal_handler(scene_as_source)
-    obs.signal_handler_connect(
-        shaken_scene_handler, "item_remove", on_shaken_sceneitem_removed
-    )
-
-
-# Restores the original rotation angle on the scene item and disconnects item_remove signal
-def restore_sceneitem_after_shake():
-    global shaken_sceneitem, shaken_sceneitem_angle
-    if shaken_sceneitem:
-        obs.obs_sceneitem_set_rot(shaken_sceneitem, shaken_sceneitem_angle)
-
-        obs.signal_handler_disconnect(
-            shaken_scene_handler, "item_remove", on_shaken_sceneitem_removed
-        )
-
-        shaken_sceneitem = None
-
-
-# Global variables holding the values of data settings / properties
-source_name = "Spaceship"  # Name of the source to shake
-frequency = 2  # Frequency of oscillations in Hertz
-amplitude = 10  # Angular amplitude of oscillations in degrees
-
-
-# Animates the scene item corresponding to source_name in the current scene
-def shake_source():
-    sceneitem = get_source_from_current_scene(source_name)
-    if sceneitem:
-        id = obs.obs_sceneitem_get_id(sceneitem)
-        if shaken_sceneitem and obs.obs_sceneitem_get_id(shaken_sceneitem) != id:
-            restore_sceneitem_after_shake()
-        if not shaken_sceneitem:
-            save_sceneitem_for_shake(sceneitem)
-        angle = shaken_sceneitem_angle + amplitude * math.sin(
-            time.time() * frequency * 2 * math.pi
-        )
-        obs.obs_sceneitem_set_rot(sceneitem, angle)
-    else:
-        restore_sceneitem_after_shake()
-
-
 # Called at script unload
 def script_unload():
-    restore_sceneitem_after_shake()
+    pass
 
 
 # Called to set default values of data settings
@@ -185,7 +126,6 @@ def script_properties():
 
 # Called after change of settings including once after script load
 def script_update(settings):
-    restore_sceneitem_after_shake()
     source_name = obs.obs_data_get_string(settings, "source_name")
     amplitude = obs.obs_data_get_int(settings, "amplitude")
     frequency = obs.obs_data_get_double(settings, "frequency")
@@ -201,47 +141,32 @@ def script_update(settings):
     )
 
 
-# Global animation activity flag
-trigger = False
-
-
 # Called every frame
 def script_tick(seconds):
-    global trigger, source_name
-    if trigger:
-        shaker.shake(trigger=True)
-        trigger = False
-    elif shaker.start_time:
+    if shaker.start_time or shaker.trigger:
         shaker.shake()
 
 
 # Callback for the hotkey
 def on_shake_hotkey(pressed):
-    global trigger
-    trigger = pressed
-
-
-# Identifier of the hotkey set by OBS
-hotkey_id = obs.OBS_INVALID_HOTKEY_ID
+    shaker.trigger = pressed
 
 
 # Called at script load
 def script_load(settings):
-    global hotkey_id
-    hotkey_id = obs.obs_hotkey_register_frontend(
+    hotkey.id = obs.obs_hotkey_register_frontend(
         script_path(), "Fart Shake", on_shake_hotkey
     )
     hotkey_save_array = obs.obs_data_get_array(settings, "shake_hotkey")
-    obs.obs_hotkey_load(hotkey_id, hotkey_save_array)
+    obs.obs_hotkey_load(hotkey.id, hotkey_save_array)
     obs.obs_data_array_release(hotkey_save_array)
 
 
 # Called before data settings are saved
 def script_save(settings):
-    restore_sceneitem_after_shake()
     obs.obs_save_sources()
 
     # Hotkey save
-    hotkey_save_array = obs.obs_hotkey_save(hotkey_id)
+    hotkey_save_array = obs.obs_hotkey_save(hotkey.id)
     obs.obs_data_set_array(settings, "shake_hotkey", hotkey_save_array)
     obs.obs_data_array_release(hotkey_save_array)

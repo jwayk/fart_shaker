@@ -1,6 +1,10 @@
 import obspython as obs
 
 
+class HotkeyManager:
+    id = obs.OBS_INVALID_HOTKEY_ID
+
+
 def get_source_from_current_scene(source_name: str):
     current_scene_source = obs.obs_frontend_get_current_scene()
 
