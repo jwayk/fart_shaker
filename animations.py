@@ -8,7 +8,6 @@ DEFAULT_RESOLUTION = 300
 
 
 class Animation:
-
     time = []
     function = []
     samples_per_second = DEFAULT_RESOLUTION
@@ -43,13 +42,14 @@ class FartShake(Animation):
 
 
 class Bulge(Animation):
-    def __init__(self, amplitude: float, damping_factor: float, duration_seconds: float):
+    def __init__(
+        self, amplitude: float, damping_factor: float, duration_seconds: float
+    ):
         super().__init__(duration_seconds)
         self.amplitude = amplitude
         self.damping_factor = damping_factor
-        self.function = (
-            self.amplitude
-            * np.exp(-np.log(2) * self.damping_factor * self.time)
+        self.function = self.amplitude * np.exp(
+            -np.log(2) * self.damping_factor * self.time
         )
 
 
