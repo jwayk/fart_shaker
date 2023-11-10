@@ -1,6 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plot
 
+import settings
+
 
 DEFAULT_RESOLUTION = 600
 
@@ -19,20 +21,23 @@ class FartShake:
         self.duration = duration
         self.damping_factor = damping_factor
         self.resolution = resolution
-        time = np.arange(0, self.duration, self.duration / self.resolution)
+        self.time = np.arange(0, self.duration, self.duration / self.resolution)
         self.function = (
             self.amplitude
-            * np.sin(time * self.frequency)
-            * np.exp(-np.log(2) * self.damping_factor * time)
+            * np.sin(self.time * self.frequency)
+            * np.exp(-np.log(2) * self.damping_factor * self.time)
         )
 
     def plot(self):
-        plot.plot(
-            np.arange(0, self.duration, self.duration / self.resolution), self.function
-        )
+        plot.plot(self.time, self.function)
         plot.show()
 
 
 if __name__ == "__main__":
-    animation = FartShake(amplitude=40, frequency=50, duration=1.4, damping_factor=10)
+    animation = FartShake(
+        amplitude=settings.DEFAULT_AMPLITUDE,
+        frequency=settings.DEFAULT_FREQUENCY,
+        duration=settings.DEFAULT_DURATION,
+        damping_factor=settings.DEFAULT_DAMPING_FACTOR,
+    )
     animation.plot()
