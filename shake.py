@@ -3,6 +3,7 @@ import math, time
 import numpy as np
 
 from animations import FartShake
+from obs import get_source_from_current_scene
 
 
 class Shaker:
@@ -20,7 +21,7 @@ class Shaker:
     if not self.start_time or trigger:
       self.start_time = time.time()
 
-    scene = get_sceneitem_from_source_name_in_current_scene(source_name)
+    scene = get_source_from_current_scene(source_name)
 
     if not scene:
       # restore_sceneitem_after_shake()
@@ -86,17 +87,6 @@ def restore_sceneitem_after_shake():
     shaken_sceneitem = None
 
 
-# Retrieves the scene item of the given source name in the current scene or None if not found
-def get_sceneitem_from_source_name_in_current_scene(name):
-  result_sceneitem = None
-  current_scene_as_source = obs.obs_frontend_get_current_scene()
-  if current_scene_as_source:
-    current_scene = obs.obs_scene_from_source(current_scene_as_source)
-    result_sceneitem = obs.obs_scene_find_source_recursive(current_scene, name)
-    obs.obs_source_release(current_scene_as_source)
-  return result_sceneitem
-
-
 # Global variables holding the values of data settings / properties
 source_name = "Spaceship"  # Name of the source to shake
 frequency = 2              # Frequency of oscillations in Hertz
@@ -110,7 +100,7 @@ def update_angle():
 
 # Animates the scene item corresponding to source_name in the current scene
 def shake_source():
-  sceneitem = get_sceneitem_from_source_name_in_current_scene(source_name)
+  sceneitem = get_source_from_current_scene(source_name)
   if sceneitem:
     id = obs.obs_sceneitem_get_id(sceneitem)
     if shaken_sceneitem and obs.obs_sceneitem_get_id(shaken_sceneitem) != id:
