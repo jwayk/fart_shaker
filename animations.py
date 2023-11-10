@@ -19,11 +19,11 @@ class FartShake:
         self.duration = duration
         self.damping_factor = damping_factor
         self.resolution = resolution
-        x = np.arange(0, self.duration, self.duration / self.resolution)
+        time = np.arange(0, self.duration, self.duration / self.resolution)
         self.function = (
             self.amplitude
-            * np.sin(x * self.frequency)
-            * np.exp(-np.log(2) * self.damping_factor * x)
+            * np.sin(time * self.frequency)
+            * np.exp(-np.log(2) * self.damping_factor * time)
         )
 
     def plot(self):
