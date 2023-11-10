@@ -16,9 +16,9 @@ class Shaker:
         if not self.start_time or trigger:
             self.start_time = time.time()
 
-        scene = get_source_from_current_scene(self.source_name)
+        source = get_source_from_current_scene(self.source_name)
 
-        if not scene:
+        if not source:
             return
 
         frame = int(
@@ -30,7 +30,7 @@ class Shaker:
             return
 
         angle = self.animation.function[frame]
-        obs.obs_sceneitem_set_rot(scene, angle)
+        obs.obs_sceneitem_set_rot(source, angle)
 
     def set_source(self, source_name: str):
         self.source_name = source_name
