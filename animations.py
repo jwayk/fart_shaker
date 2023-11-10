@@ -34,5 +34,10 @@ class FartShake:
 
 
 if __name__ == "__main__":
-    animation = FartShake(400, 60, 1, 3)
+    animation = FartShake(
+        amplitude=40, 
+        frequency=50, 
+        duration=1.4, 
+        damping_factor=10
+    )
     animation.plot()
