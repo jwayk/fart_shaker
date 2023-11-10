@@ -1,6 +1,5 @@
 import obspython as obs
 import math, time
-import numpy as np
 
 from animations import FartShake
 from obs import get_source_from_current_scene
