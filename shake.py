@@ -42,7 +42,7 @@ class Shaker:
 DEFAULT_SOURCE = ""
 DEFAULT_AMPLITUDE = 40
 DEFAULT_FREQUENCY = 50
-DEFAULT_DURATION = 1.4
+DEFAULT_DURATION = 1
 DEFAULT_DAMPING_FACTOR = 10
 
 
@@ -135,8 +135,9 @@ def script_unload():
 # Called to set default values of data settings
 def script_defaults(settings):
     obs.obs_data_set_default_string(settings, "source_name", "")
-    obs.obs_data_set_default_double(settings, "DEFAULT_FREQUENCY", 2)
-    obs.obs_data_set_default_int(settings, "DEFAULT_AMPLITUDE", 40)
+    obs.obs_data_set_default_int(settings, "amplitude", DEFAULT_AMPLITUDE)
+    obs.obs_data_set_default_double(settings, "frequency", DEFAULT_FREQUENCY)
+    obs.obs_data_set_default_int(settings, "duration", DEFAULT_DURATION)
 
 
 # Fills the given list property object with the names of all sources plus an empty one
@@ -163,7 +164,6 @@ def script_properties():
         obs.OBS_COMBO_FORMAT_STRING,
     )
     populate_list_property_with_source_names(source_list)
-    # obs.obs_properties_add_text(props, "source_name", "Source name", obs.OBS_TEXT_DEFAULT)
 
     # Button to refresh the drop-down list
     obs.obs_properties_add_button(
@@ -176,11 +176,10 @@ def script_properties():
     )
 
     obs.obs_properties_add_float_slider(
-        props, "DEFAULT_FREQUENCY", "Fart timbre", 0.1, 150, 0.1
+        props, "frequency", "Fart timbre", 0.1, 150, 0.1
     )
-    obs.obs_properties_add_int_slider(
-        props, "DEFAULT_AMPLITUDE", "Fart intensity", 0, 100, 1
-    )
+    obs.obs_properties_add_int_slider(props, "amplitude", "Fart intensity", 0, 100, 1)
+    obs.obs_properties_add_int_slider(props, "duration", "Fart duration", 1, 20, 1)
     return props
 
 
@@ -188,15 +187,16 @@ def script_properties():
 def script_update(settings):
     restore_sceneitem_after_shake()
     source_name = obs.obs_data_get_string(settings, "source_name")
-    frequency = obs.obs_data_get_double(settings, "DEFAULT_FREQUENCY")
-    amplitude = obs.obs_data_get_int(settings, "DEFAULT_AMPLITUDE")
+    amplitude = obs.obs_data_get_int(settings, "amplitude")
+    frequency = obs.obs_data_get_double(settings, "frequency")
+    duration = obs.obs_data_get_int(settings, "duration")
     shaker.set_source(source_name)
     shaker.set_animation(
         FartShake(
             amplitude=amplitude,
             frequency=frequency,
-            duration=DEFAULT_DURATION,
-            damping_factor=DEFAULT_DAMPING_FACTOR,
+            duration=duration,
+            damping_factor=1 / duration * 20,
         )
     )
 
