@@ -197,8 +197,8 @@ def script_update(settings):
     shaker.set_rattle(
         PlanarShake(
             amplitude=pos_factor,
-            frequency=frequency,
-            damping_factor=30 / duration,
+            frequency=frequency / 1000,
+            damping_factor=20 / duration,
             duration_seconds=duration,
         )
     )

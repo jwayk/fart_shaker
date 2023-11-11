@@ -90,7 +90,7 @@ class NoisyRattle(Wobble):
     def calculate(self):
         self.phase = random.randint(0, 360)
         return savgol_filter(
-            super().calculate() * np.random.normal(size=self.time.shape), 20, 10
+            super().calculate() * np.random.normal(size=self.time.shape), 75, 10
         )
 
     def get_transform(self):
