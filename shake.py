@@ -1,7 +1,8 @@
 import obspython as obs
-import math, time
+import time
+from typing import Tuple
 
-from animations import FartShake, Bulge
+from animations import Wobble, Bulge, PlanarShake
 from obs_tools import get_source_from_current_scene, HotkeyManager
 from settings import (
     DEFAULT_SOURCE,
@@ -16,63 +17,84 @@ class Shaker:
     start_time = None
     trigger = False
     start_scale = obs.vec2()
+    start_pos = obs.vec2()
 
     def __init__(
-        self, source_name: str, wobble_animation: FartShake, scale_animation: Bulge
+        self,
+        source_name: str,
+        wobble_animation: Wobble,
+        scale_animation: Bulge,
+        rattle_animation: PlanarShake,
     ):
         self.set_source(source_name)
         self.set_wobble(wobble_animation)
         self.set_bulge(scale_animation)
+        self.set_rattle(rattle_animation)
 
     def shake(self):
         source = get_source_from_current_scene(self.source_name)
+        if not source:
+            return
 
         if self.trigger:
             if not self.start_time:
                 obs.obs_sceneitem_get_scale(source, self.start_scale)
+                obs.obs_sceneitem_get_pos(source, self.start_pos)
             self.start_time = time.time()
+            self.randomize_shake()
             self.trigger = False
-
-        if not source:
-            return
 
         frame = int(
             ((time.time() - self.start_time) / self.wobble.duration_seconds)
-            * len(self.wobble.function)
+            * self.wobble.time.shape[0]
         )
-        if frame >= len(self.wobble.function):
+        if frame >= len(self.wobble.transform_function):
             self.start_time = None
             return
 
-        angle = self.wobble.function[frame]
-        scale_factor = self.bulge.function[frame]
-
+        angle = self.wobble.transform_function[frame]
         obs.obs_sceneitem_set_rot(source, angle)
+
         new_scale = obs.vec2()
+        scale_factor = self.bulge.transform_function[frame]
         new_scale.x = self.start_scale.x + scale_factor
         new_scale.y = self.start_scale.y + scale_factor
         obs.obs_sceneitem_set_scale(source, new_scale)
 
+        new_pos = obs.vec2()
+        x_displace = self.rattle.x.transform_function[frame]
+        y_displace = self.rattle.y.transform_function[frame]
+        new_pos.x = self.start_pos.x + x_displace
+        new_pos.y = self.start_pos.y - y_displace
+        obs.obs_sceneitem_set_pos(source, new_pos)
+
+    def randomize_shake(self):
+        self.rattle.randomize()
+
     def set_source(self, source_name: str):
         self.source_name = source_name
 
-    def set_wobble(self, animation: FartShake):
+    def set_wobble(self, animation: Wobble):
         self.wobble = animation
 
     def set_bulge(self, animation: Bulge):
         self.bulge = animation
 
+    def set_rattle(self, animation: PlanarShake):
+        self.rattle = animation
+
 
 hotkey = HotkeyManager()
 shaker = Shaker(
     source_name=DEFAULT_SOURCE,
-    wobble_animation=FartShake(
+    wobble_animation=Wobble(
         amplitude=DEFAULT_AMPLITUDE,
         frequency=DEFAULT_FREQUENCY,
         duration_seconds=DEFAULT_DURATION,
         damping_factor=DEFAULT_DAMPING_FACTOR,
     ),
     scale_animation=Bulge(5, 10, DEFAULT_DURATION),
+    rattle_animation=PlanarShake(10, 20, 5, DEFAULT_DURATION),
 )
 
 
@@ -136,9 +158,14 @@ def script_properties():
         props, "frequency", "Wobble Speed", 0.1, 150, 0.1
     )
     obs.obs_properties_add_int_slider(props, "amplitude", "Wobble Intensity", 0, 100, 1)
-    obs.obs_properties_add_int_slider(props, "duration", "Wobble Duration", 1, 20, 1)
+    obs.obs_properties_add_float_slider(
+        props, "duration", "Wobble Duration", 1, 3, 0.02
+    )
     obs.obs_properties_add_float_slider(
         props, "scale_factor", "Scale Intensity", 0, 2, 0.01
+    )
+    obs.obs_properties_add_float_slider(
+        props, "pos_factor", "Discombobulation", 0, 10000, 1
     )
     return props
 
@@ -150,19 +177,28 @@ def script_update(settings):
     frequency = obs.obs_data_get_double(settings, "frequency")
     duration = obs.obs_data_get_int(settings, "duration")
     scale_factor = obs.obs_data_get_double(settings, "scale_factor")
+    pos_factor = obs.obs_data_get_double(settings, "pos_factor")
     shaker.set_source(source_name)
     shaker.set_wobble(
-        FartShake(
+        Wobble(
             amplitude=amplitude,
             frequency=frequency,
-            damping_factor=1 / duration * 20,
+            damping_factor=20 / duration,
             duration_seconds=duration,
         )
     )
     shaker.set_bulge(
         Bulge(
             amplitude=scale_factor,
-            damping_factor=1 / duration * 30,
+            damping_factor=30 / duration,
+            duration_seconds=duration,
+        )
+    )
+    shaker.set_rattle(
+        PlanarShake(
+            amplitude=pos_factor,
+            frequency=frequency,
+            damping_factor=30 / duration,
             duration_seconds=duration,
         )
     )
