@@ -155,8 +155,8 @@ def script_update(settings):
         FartShake(
             amplitude=amplitude,
             frequency=frequency,
-            duration_seconds=duration,
             damping_factor=1 / duration * 20,
+            duration_seconds=duration,
         )
     )
     shaker.set_bulge(
