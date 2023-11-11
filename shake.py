@@ -1,7 +1,7 @@
 import obspython as obs
 import math, time
 
-from animations import FartShake
+from animations import FartShake, Bulge
 from obs_tools import get_source_from_current_scene, HotkeyManager
 from settings import (
     DEFAULT_SOURCE,
@@ -15,48 +15,64 @@ from settings import (
 class Shaker:
     start_time = None
     trigger = False
+    start_scale = obs.vec2()
 
-    def __init__(self, source_name: str, animation: FartShake):
+    def __init__(
+        self, source_name: str, wobble_animation: FartShake, scale_animation: Bulge
+    ):
         self.set_source(source_name)
-        self.set_animation(animation)
+        self.set_wobble(wobble_animation)
+        self.set_bulge(scale_animation)
 
     def shake(self):
-        if not self.start_time or self.trigger:
+        source = get_source_from_current_scene(self.source_name)
+
+        if self.trigger:
+            if not self.start_time:
+                obs.obs_sceneitem_get_scale(source, self.start_scale)
             self.start_time = time.time()
             self.trigger = False
-
-        source = get_source_from_current_scene(self.source_name)
 
         if not source:
             return
 
         frame = int(
-            ((time.time() - self.start_time) / self.animation.duration)
-            * self.animation.resolution
+            ((time.time() - self.start_time) / self.wobble.duration_seconds)
+            * len(self.wobble.function)
         )
-        if frame >= len(self.animation.function):
+        if frame >= len(self.wobble.function):
             self.start_time = None
             return
 
-        angle = self.animation.function[frame]
+        angle = self.wobble.function[frame]
+        scale_factor = self.bulge.function[frame]
+
         obs.obs_sceneitem_set_rot(source, angle)
+        new_scale = obs.vec2()
+        new_scale.x = self.start_scale.x + scale_factor
+        new_scale.y = self.start_scale.y + scale_factor
+        obs.obs_sceneitem_set_scale(source, new_scale)
 
     def set_source(self, source_name: str):
         self.source_name = source_name
 
-    def set_animation(self, animation: FartShake):
-        self.animation = animation
+    def set_wobble(self, animation: FartShake):
+        self.wobble = animation
+
+    def set_bulge(self, animation: Bulge):
+        self.bulge = animation
 
 
 hotkey = HotkeyManager()
 shaker = Shaker(
     source_name=DEFAULT_SOURCE,
-    animation=FartShake(
+    wobble_animation=FartShake(
         amplitude=DEFAULT_AMPLITUDE,
         frequency=DEFAULT_FREQUENCY,
-        duration=DEFAULT_DURATION,
+        duration_seconds=DEFAULT_DURATION,
         damping_factor=DEFAULT_DAMPING_FACTOR,
     ),
+    scale_animation=Bulge(5, 10, DEFAULT_DURATION),
 )
 
 
@@ -78,7 +94,7 @@ def script_defaults(settings):
     obs.obs_data_set_default_string(settings, "source_name", "")
     obs.obs_data_set_default_int(settings, "amplitude", DEFAULT_AMPLITUDE)
     obs.obs_data_set_default_double(settings, "frequency", DEFAULT_FREQUENCY)
-    obs.obs_data_set_default_int(settings, "duration", DEFAULT_DURATION)
+    obs.obs_data_set_default_double(settings, "duration", DEFAULT_DURATION)
 
 
 # Fills the given list property object with the names of all sources plus an empty one
@@ -117,10 +133,13 @@ def script_properties():
     )
 
     obs.obs_properties_add_float_slider(
-        props, "frequency", "Fart timbre", 0.1, 150, 0.1
+        props, "frequency", "Wobble Speed", 0.1, 150, 0.1
     )
-    obs.obs_properties_add_int_slider(props, "amplitude", "Fart intensity", 0, 100, 1)
-    obs.obs_properties_add_int_slider(props, "duration", "Fart duration", 1, 20, 1)
+    obs.obs_properties_add_int_slider(props, "amplitude", "Wobble Intensity", 0, 100, 1)
+    obs.obs_properties_add_int_slider(props, "duration", "Wobble Duration", 1, 20, 1)
+    obs.obs_properties_add_float_slider(
+        props, "scale_factor", "Scale Intensity", 0, 2, 0.01
+    )
     return props
 
 
@@ -130,13 +149,21 @@ def script_update(settings):
     amplitude = obs.obs_data_get_int(settings, "amplitude")
     frequency = obs.obs_data_get_double(settings, "frequency")
     duration = obs.obs_data_get_int(settings, "duration")
+    scale_factor = obs.obs_data_get_double(settings, "scale_factor")
     shaker.set_source(source_name)
-    shaker.set_animation(
+    shaker.set_wobble(
         FartShake(
             amplitude=amplitude,
             frequency=frequency,
-            duration=duration,
+            duration_seconds=duration,
             damping_factor=1 / duration * 20,
+        )
+    )
+    shaker.set_bulge(
+        Bulge(
+            amplitude=scale_factor,
+            damping_factor=1 / duration * 30,
+            duration_seconds=duration,
         )
     )
 
